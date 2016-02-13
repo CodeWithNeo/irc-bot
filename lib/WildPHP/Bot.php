@@ -56,7 +56,7 @@ class Bot
 	/**
 	 * @param string[] $modules
 	 */
-	public function addModules(array $modules)
+	public function loadModules(array $modules)
 	{
 		$this->getModuleProxy()->loadModules($modules);
 	}

@@ -22,17 +22,14 @@ use WildPHP\Bot;
 use WildPHP\Modules\DotModules\Parser as DotModulesParser;
 use WildPHP\Modules\DotModules\Router as DotModulesRouter;
 
-// Set error reporting to report all errors
 error_reporting(E_ALL);
 
-// Check if we are running as root and quit
 if (function_exists('posix_getuid') && posix_getuid() === 0)
 {
 	echo 'Running wildphp as root is not allowed.' . PHP_EOL;
 	exit(128);
 }
 
-// Check if we are running high enough PHP version
 if (version_compare(PHP_VERSION, '5.5.0', '<'))
 {
 	echo 'The PHP version you are running (' . PHP_VERSION . ') is not sufficient for WildPHP. Sorry.';
@@ -40,14 +37,12 @@ if (version_compare(PHP_VERSION, '5.5.0', '<'))
 	exit(129);
 }
 
-// Define global constants
 define('WPHP_ROOT_DIR', __DIR__ . '/');
 define('WPHP_LIB_DIR', WPHP_ROOT_DIR . 'lib/');
 define('WPHP_MODULE_DIR', WPHP_ROOT_DIR . 'modules/');
 define('WPHP_LOG_DIR', WPHP_ROOT_DIR . 'logs/');
 define('WPHP_CONFIG', WPHP_ROOT_DIR . 'config.neon');
 
-// Turn all PHP errors into exceptions
 set_error_handler(
 	function($errNo, $errStr, $errFile, $errLine)
 	{
@@ -55,10 +50,8 @@ set_error_handler(
 	}
 );
 
-// Register the autoloader
 require_once('vendor/autoload.php');
 
-// Create a new bot and start it up
 $bot = new Bot();
 
 $parser = new DotModulesParser();
@@ -70,9 +63,7 @@ if (!empty($result))
 	$modules = $router->routeAll($result);
 
 	if (!empty($modules))
-		$bot->addModules($modules);
+		$bot->loadModules($modules);
 }
 
 $bot->start();
-
-
