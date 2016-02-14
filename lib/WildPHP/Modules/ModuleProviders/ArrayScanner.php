@@ -32,6 +32,9 @@ class ArrayScanner extends BaseScanner
 	public function scanArray(array $array)
 	{
 		foreach ($array as $module)
-			$this->tryAddValidModule($module);
+		{
+			if (self::moduleExtendsOnBaseModule($module))
+				$this->tryAddValidModule($module);
+		}
 	}
 }
