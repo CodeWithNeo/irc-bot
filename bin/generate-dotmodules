@@ -1,0 +1,143 @@
+#!/bin/php
+<?php
+
+if (php_sapi_name() !== 'cli')
+	die('This tool needs to be run from the command line.');
+
+include (dirname(__FILE__) . '/../vendor/autoload.php');
+
+function p($string = '')
+{
+	echo $string . PHP_EOL;
+}
+
+function scanDirectory($directory, $recursive = true, WildPHP\Modules\ModuleProviders\DirectoryScanner $ds)
+{
+	if (!is_dir($directory))
+		return false;
+
+	$ds->scanDirectory($directory);
+
+	$directoryContents = scandir($directory);
+	foreach ($directoryContents as $entry)
+	{
+		if ($entry == '.' || $entry == '..')
+			continue;
+
+		if (is_dir($directory . '/' . $entry))
+			scanDirectory($directory . '/' . $entry, $recursive, $ds);
+	}
+}
+
+function prompt()
+{
+	p();
+	p('==> Are you sure you want to continue? (y/N)');
+	$prompt = readline('==> ');
+	if (strtolower($prompt) != 'y')
+		exit(0);
+}
+
+// Parse the arguments.
+$options = getopt("d:h::f:", array("dir::"));
+
+$currentWorkingDirectory = getcwd();
+
+if (array_key_exists('h', $options) || empty($options))
+{
+	p('generate-dotmodules: Script to automatically build a .modules file.');
+	p();
+	p('Usage: generate-dotmodules [options] -f <output file>');
+	p('The output file and directories are always relative to the current directory.');
+	p();
+	p('Options:');
+	p(' -f, the file to write to. The file must exist.');
+	p(' -h, --help: Show this help message.');
+	p(' -d, --dir: Directory to scan. Can be used multiple times.');
+	//p(' --no-subdirectories: Do not scan subdirectories. Defaults to off.');
+	p();
+	p('Examples:');
+	p(' generate-dotmodules ../main.modules');
+	p(' generate-dotmodules -d /some/directory ../main.modules');
+	p(' generate-dotmodules --dir=/some/directory ../main.modules');
+	exit(0);
+}
+
+if (!array_key_exists('f', $options) || is_array($options['f']))
+{
+	p('You need to specify one file to write the result to. For usage, use the -h option.');
+	exit(1);
+}
+
+if (!file_exists($options['f']))
+{
+	p('The specified file does not exist. Will now exit.');
+	exit(1);
+}
+
+$dotModulesFile = realpath($options['f']);
+
+p('Will write result to: ' . $dotModulesFile);
+p();
+
+$directories = [];
+foreach ($options as $option => $value)
+{
+	if ($option != 'd' && $option != 'dir')
+		continue;
+
+	if (!is_array($value))
+		$value = [$value];
+	$fullpath = realpath($value);
+
+	if ($fullpath != false)
+		$directories[] = $fullpath;
+}
+
+if (empty($directory))
+	$directories[] = $currentWorkingDirectory;
+
+p('Scanning the following directories...');
+
+$ds = new WildPHP\Modules\ModuleProviders\DirectoryScanner();
+
+foreach ($directories as $directory)
+{
+	p(' - ' . $directory);
+	scanDirectory($directory, true, $ds);
+}
+
+p();
+p('Determined modules:');
+
+$validModules = $ds->getValidModules();
+
+$buffer = '';
+foreach ($validModules as $validModule)
+{
+	p(' - ' . $validModule);
+	$buffer .= $validModule . "\n";
+}
+$buffer = trim($buffer);
+
+prompt();
+
+$result = copy($dotModulesFile, $dotModulesFile . '.backup');
+
+if (!$result)
+{
+	p('!!! UNABLE to create a backup file. Additional comfirmation required.');
+	p('!!! Please manually make a backup, if you desire.');
+	prompt();
+}
+
+$result = file_put_contents($dotModulesFile, $buffer);
+
+if (!$result)
+{
+	p('!!! Failed to write data to the file. Make sure this script has permission to write to the file.');
+	exit(1);
+}
+
+p('Generation successful!');
+exit(0);
