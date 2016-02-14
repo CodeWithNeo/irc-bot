@@ -34,7 +34,7 @@ class ArrayScanner extends BaseScanner
 		foreach ($array as $module)
 		{
 			if (self::moduleExtendsOnBaseModule($module))
-				$this->tryAddValidModule($module);
+				$this->addModule($module);
 		}
 	}
 }
