@@ -40,64 +40,31 @@ class DirectoryScanner extends BaseScanner
 
 		foreach ($entries as $entry)
 		{
-			if ($entry == '.' || $entry == '..' || !is_dir($dir . '/' . $entry))
+			if ($entry == '.' || $entry == '..' || is_dir($dir . '/' . $entry))
 				continue;
 
-			if (file_exists($dir . '/' . $entry . '/' . $entry . '.php'))
-			{
-				$file = $dir . '/' . $entry . '/' . $entry . '.php';
+			$file = $dir . '/' . $entry;
 
-				$namespace = $this->determineNamespace($file);
-				$class = $this->determineClassName($file);
-				if (!$namespace || !$class)
-					continue;
+			$class = $this->extractClassFromMarkInFile($file);
+			if (!$class)
+				continue;
 
-				// Include the file so the class is available and our autoloader doesn't try to
-				// load files that aren't there.
-				include_once($file);
-
-				$className = $namespace . '\\' . $class;
-
-				echo 'Determined possible module: ' . $className . ' (is available: ' . (class_exists($className) ? 'Yes' : 'No') . ', is valid: ' . (self::isValidModule($className) ? 'Yes' : 'No') . ')' . PHP_EOL;
-
-				// Et voilla.
-				$this->tryAddValidModule($className);
-			}
+			$this->addModule($class);
 		}
 	}
 
-	public function determineNamespace($file)
+	public function extractClassFromMarkInFile($file)
 	{
 		if (!file_exists($file) || !is_readable($file))
 			return false;
 
 		$contents = file_get_contents($file);
 
-		$result = preg_match('/namespace\s+([a-zA-Z0-9\\\_]+)(?:\s+)?;/', $contents, $matches);
-
-		if ($result == false)
-			return false;
-
-		if (substr($matches[1], 0, 1) !== '\\')
-			$matches[1] = '\\' . $matches[1];
-
-		return $matches[1];
-	}
-
-	public function determineClassName($file)
-	{
-		if (!file_exists($file) || !is_readable($file))
-			return false;
-
-		$contents = file_get_contents($file);
-
-		$result = preg_match('/class\s+([a-zA-Z0-9_]+)/', $contents, $matches);
+		$result = preg_match("/\\/\\* WPHP_MODULE (\\\\[a-zA-Z0-9\\\\\\_]+) \\*\\//", $contents, $matches);
 
 		if ($result == false)
 			return false;
 
 		return $matches[1];
 	}
-
-
 }
